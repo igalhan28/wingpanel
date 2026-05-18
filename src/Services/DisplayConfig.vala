@@ -51,6 +51,40 @@ public interface Wingpanel.Services.DisplayConfig : Object {
         _is_logical_layout = layout_mode == 1;
     }
 
+    public static bool is_edp1_primary () {
+        if (proxy == null) {
+            init ();
+        }
+
+        uint current_serial;
+        MutterReadMonitor[] mutter_monitors;
+        MutterReadLogicalMonitor[] mutter_logical_monitors;
+        GLib.HashTable<string, GLib.Variant> properties;
+
+        try {
+            proxy.get_current_state (
+                out current_serial,
+                out mutter_monitors,
+                out mutter_logical_monitors,
+                out properties
+            );
+        } catch (Error e) {
+            critical (e.message);
+            return false;
+        }
+
+        foreach (var logical in mutter_logical_monitors) {
+            if (!logical.primary) continue;
+            foreach (var info in logical.monitors) {
+                if (info.connector == "eDP-1") {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     public signal void monitors_changed ();
     public abstract void get_current_state (out uint serial, out MutterReadMonitor[] monitors, out MutterReadLogicalMonitor[] logical_monitors, out GLib.HashTable<string, GLib.Variant> properties) throws Error;
 }

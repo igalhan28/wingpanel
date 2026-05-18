@@ -41,8 +41,9 @@ public class Wingpanel.Widgets.Panel : Gtk.EventBox {
         set_css_name ("panel");
     }
 
+
     construct {
-        height_request = 30;
+        height_request = Services.DisplayConfig.is_edp1_primary () ? 32 : 24;
         hexpand = true;
         vexpand = true;
         valign = START;
@@ -145,24 +146,9 @@ public class Wingpanel.Widgets.Panel : Gtk.EventBox {
                 int index = children.index (current);
                 if (index == -1) {
                     break;
-                } else if (index < children.length () - 1) { // Has more than one indicator in the left menubar
+                } else if (index < children.length () - 1) {
                     sibling = children.nth_data (index + 1) as IndicatorEntry;
-                } else { // No more indicators on the left
-                    var center_children = center_menubar.get_children ();
-                    if (center_children.length () > 0) {
-                        sibling = center_children.first ().data as IndicatorEntry;
-                    }
-                }
-
-                break;
-            case Indicator.DATETIME:
-                var children = center_menubar.get_children ();
-                int index = children.index (current);
-                if (index == -1) {
-                    break;
-                } else if (index < children.length () - 1) { // Has more than one indicator in the center menubar
-                    sibling = children.nth_data (index + 1) as IndicatorEntry;
-                } else { // No more indicators on the center
+                } else { // No more indicators on the left, jump to right
                     var right_children = right_menubar.get_children ();
                     if (right_children.length () > 0) {
                         sibling = right_children.first ().data as IndicatorEntry;
@@ -175,9 +161,9 @@ public class Wingpanel.Widgets.Panel : Gtk.EventBox {
                 int index = children.index (current);
                 if (index == -1) {
                     break;
-                } else if (index < children.length () - 1) { // Has more than one indicator in the right menubar
+                } else if (index < children.length () - 1) {
                     sibling = children.nth_data (index + 1) as IndicatorEntry;
-                } else { // No more indicators on the right
+                } else { // No more indicators on the right, wrap to left
                     var left_children = left_menubar.get_children ();
                     if (left_children.length () > 0) {
                         sibling = left_children.first ().data as IndicatorEntry;
@@ -199,27 +185,12 @@ public class Wingpanel.Widgets.Panel : Gtk.EventBox {
                 int index = children.index (current);
                 if (index == -1) {
                     break;
-                } else if (index != 0) { // Is not the first indicator in the left menubar
+                } else if (index != 0) {
                     sibling = children.nth_data (index - 1) as IndicatorEntry;
-                } else { // No more indicators on the left
+                } else { // No more indicators on the left, wrap to right
                     var right_children = right_menubar.get_children ();
                     if (right_children.length () > 0) {
                         sibling = right_children.last ().data as IndicatorEntry;
-                    }
-                }
-
-                break;
-            case Indicator.DATETIME:
-                var children = center_menubar.get_children ();
-                int index = children.index (current);
-                if (index == -1) {
-                    break;
-                } else if (index != 0) { // Is not the first indicator in the center menubar
-                    sibling = children.nth_data (index - 1) as IndicatorEntry;
-                } else { // No more indicators on the center
-                    var left_children = left_menubar.get_children ();
-                    if (left_children.length () > 0) {
-                        sibling = left_children.last ().data as IndicatorEntry;
                     }
                 }
 
@@ -229,12 +200,12 @@ public class Wingpanel.Widgets.Panel : Gtk.EventBox {
                 int index = children.index (current);
                 if (index == -1) {
                     break;
-                } else if (index != 0) { // Is not the first indicator in the right menubar
+                } else if (index != 0) {
                     sibling = children.nth_data (index - 1) as IndicatorEntry;
-                } else { // No more indicators on the right
-                    var center_children = center_menubar.get_children ();
-                    if (center_children.length () > 0) {
-                        sibling = center_children.last ().data as IndicatorEntry;
+                } else { // No more indicators on the right, wrap to left
+                    var left_children = left_menubar.get_children ();
+                    if (left_children.length () > 0) {
+                        sibling = left_children.last ().data as IndicatorEntry;
                     }
                 }
 
@@ -253,8 +224,8 @@ public class Wingpanel.Widgets.Panel : Gtk.EventBox {
                 left_menubar.add (indicator_entry);
                 break;
             case Indicator.DATETIME:
-                indicator_entry.set_transition_type (Gtk.RevealerTransitionType.SLIDE_DOWN);
-                center_menubar.add (indicator_entry);
+                indicator_entry.set_transition_type (Gtk.RevealerTransitionType.SLIDE_LEFT);
+                right_menubar.insert_sorted (indicator_entry);
                 break;
             default:
                 indicator_entry.set_transition_type (Gtk.RevealerTransitionType.SLIDE_LEFT);
