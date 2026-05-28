@@ -43,10 +43,15 @@ public class Wingpanel.Widgets.Panel : Gtk.EventBox {
 
 
     construct {
-        height_request = Services.DisplayConfig.is_edp1_primary () ? 32 : 24;
+        bool is_notched = Services.DisplayConfig.is_edp1_primary ();
+        height_request = is_notched ? 32 : 24;
         hexpand = true;
         vexpand = true;
         valign = START;
+
+        if (is_notched) {
+            get_style_context ().add_class ("notched");
+        }
 
         left_menubar = new IndicatorBar () {
             halign = START
