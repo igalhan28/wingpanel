@@ -20,8 +20,8 @@
 public class Wingpanel.Services.PopoverManager : Object {
     public bool indicator_open { get; private set; default = false; }
 
-    private Gee.HashMap<string, Wingpanel.Widgets.IndicatorEntry> registered_indicators;
     private Gtk.Popover popover;
+
     private Wingpanel.Widgets.IndicatorEntry? _current_indicator = null;
     public Wingpanel.Widgets.IndicatorEntry? current_indicator {
         get {
@@ -39,12 +39,15 @@ public class Wingpanel.Services.PopoverManager : Object {
             } else if (value == null && _current_indicator != null) { // Close requested
                 indicator_open = false;
                 _current_indicator.base_indicator.closed ();
+                _current_indicator.set_state_flags (NORMAL, true);
                 _current_indicator = null;
             } else if (_current_indicator.base_indicator.code_name == value.base_indicator.code_name) { // Close due to toggle
+                _current_indicator.set_state_flags (NORMAL, true);
                 _current_indicator.base_indicator.closed ();
                 _current_indicator = null;
             } else { // Switch
-                update_has_tooltip (_current_indicator.display_widget);
+                _current_indicator.set_state_flags (NORMAL, true);
+                _current_indicator.display_widget.has_tooltip = true;
                 _current_indicator.base_indicator.closed ();
                 _current_indicator = value;
                 popover.unparent ();
@@ -52,76 +55,29 @@ public class Wingpanel.Services.PopoverManager : Object {
 
             if (_current_indicator != null) {
                 popover.child = _current_indicator.indicator_widget;
-                update_has_tooltip (_current_indicator.display_widget, false);
+                _current_indicator.display_widget.has_tooltip = false;
                 popover.set_parent (_current_indicator);
                 popover.popup ();
+                _current_indicator.set_state_flags (CHECKED, true);
                 _current_indicator.base_indicator.opened ();
             } else {
-                update_has_tooltip (((Wingpanel.Widgets.IndicatorEntry)popover.parent).display_widget);
+                ((Widgets.IndicatorEntry)popover.parent).display_widget.has_tooltip = true;
                 popover.popdown ();
             }
         }
     }
 
-    public PopoverManager () {
-        registered_indicators = new Gee.HashMap<string, Wingpanel.Widgets.IndicatorEntry> ();
-
+    construct {
         popover = new Gtk.Popover () {
+            has_arrow = false,
             position = BOTTOM
         };
         popover.add_css_class ("indicator");
 
         popover.closed.connect (() => {
+            _current_indicator.set_state_flags (NORMAL, true);
             current_indicator = null;
             popover.unparent ();
         });
-    }
-
-    public void set_popover_visible (string code_name, bool visible) {
-        if (registered_indicators.has_key (code_name)) {
-            var new_indicator = registered_indicators.get (code_name);
-
-            if (visible && (current_indicator == null || current_indicator.base_indicator.code_name != new_indicator.base_indicator.code_name)) {
-                current_indicator = new_indicator;
-            } else if (current_indicator.base_indicator.code_name == new_indicator.base_indicator.code_name && !visible) {
-                current_indicator = null;
-            }
-        }
-    }
-
-    public void toggle_popover_visible (string code_name) {
-        if (registered_indicators.has_key (code_name)) {
-            current_indicator = registered_indicators.get (code_name);
-        }
-    }
-
-    public bool get_visible (Wingpanel.Widgets.IndicatorEntry entry) {
-        return current_indicator != null && current_indicator.base_indicator.code_name == entry.base_indicator.code_name;
-    }
-
-    private void update_has_tooltip (Gtk.Widget display_widget, bool enable = true) {
-        if (display_widget != null) {
-            display_widget.has_tooltip = enable;
-        }
-    }
-
-    public void close () {
-        if (current_indicator != null) {
-            current_indicator = null;
-        }
-    }
-
-    public void unregister_indicator (Wingpanel.Widgets.IndicatorEntry? widg) {
-        if (registered_indicators.has_key (widg.base_indicator.code_name)) {
-            registered_indicators.unset (widg.base_indicator.code_name);
-        }
-    }
-
-    public void register_indicator (Wingpanel.Widgets.IndicatorEntry? widg) {
-        if (registered_indicators.has_key (widg.base_indicator.code_name)) {
-            return;
-        }
-
-        registered_indicators.set (widg.base_indicator.code_name, widg);
     }
 }

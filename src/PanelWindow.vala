@@ -18,42 +18,37 @@
  */
 
 public class Wingpanel.PanelWindow : Gtk.Window {
-    public Services.PopoverManager popover_manager;
+    private class BottomMargin : Gtk.Widget {
+        public const int SIZE = 64;
 
+        construct {
+            height_request = SIZE;
+        }
+    }
+
+    private Services.PopoverManager popover_manager;
     private Widgets.Panel panel;
-    private int panel_height;
 
     private Pantheon.Desktop.Shell? desktop_shell;
     private Pantheon.Desktop.Panel? desktop_panel;
+    private bool initialized_background_manager = false;
 
     private Gtk.CssProvider? style_provider = null;
 
-    public PanelWindow (Gtk.Application application) {
-        Object (
-            application: application,
-            decorated: false,
-            resizable: false,
-            vexpand: false
-        );
-
+    construct {
         popover_manager = new Services.PopoverManager ();
 
         panel = new Widgets.Panel (popover_manager);
         panel.realize.connect (on_realize);
 
-        var cycle_action = new SimpleAction ("cycle", null);
-        cycle_action.activate.connect (() => panel.cycle (true));
+        var box = new Gtk.Box (VERTICAL, 0);
+        box.append (panel);
+        box.append (new BottomMargin ());
 
-        var cycle_back_action = new SimpleAction ("cycle-back", null);
-        cycle_back_action.activate.connect (() => panel.cycle (false));
-
-        application.add_action (cycle_action);
-        application.add_action (cycle_back_action);
-        application.set_accels_for_action ("app.cycle", {"<Control>Tab"});
-        application.set_accels_for_action ("app.cycle-back", {"<Control><Shift>Tab"});
-
-        child = panel;
+        child = box;
         remove_css_class (Granite.STYLE_CLASS_BACKGROUND);
+        decorated = false;
+        resizable = false;
 
         popover_manager.notify["indicator-open"].connect (() => {
             if (!popover_manager.indicator_open) {
@@ -64,46 +59,46 @@ public class Wingpanel.PanelWindow : Gtk.Window {
             }
         });
 
-        notify["scale-factor"].connect (update_panel_dimensions);
-    }
-
-    construct {
         Services.BackgroundManager.get_default ().background_state_changed.connect (update_background);
     }
 
     private void on_realize () {
-        ((Gdk.Toplevel) get_surface ()).compute_size.connect (on_compute_size);
+        unowned var surface = (Gdk.Toplevel) get_surface ();
+        surface.compute_size.connect (on_compute_size);
+        surface.layout.connect (on_layout);
 
-        update_panel_dimensions ();
-        Services.BackgroundManager.initialize (panel_height);
+        surface.enter_monitor.connect (on_enter_monitor);
 
         init_wl ();
     }
 
-    private void on_compute_size (Gdk.ToplevelSize top_level_size) {
-        /* We do our own size calculation to make sure the box shadow in the translucent style isn't cut off */
-        top_level_size.set_size (width_request, panel.get_height () + 5);
-        top_level_size.set_shadow_width (0, 0, 0, 5);
+    private static void on_compute_size (Gdk.ToplevelSize top_level_size) {
+        top_level_size.set_shadow_width (0, 0, 0, BottomMargin.SIZE);
     }
 
-    private void update_panel_dimensions () {
-        panel_height = panel.get_height ();
+    private void on_layout (Gdk.Surface surface, int width, int height) {
+        surface.set_input_region (
+            new Cairo.Region.rectangle ({
+                0, 0, width, height - BottomMargin.SIZE
+            })
+        );
 
-        // We just use our monitor because Gala makes sure we are always on the primary one
-        var monitor_dimensions = get_display ().get_monitor_at_surface (get_surface ()).get_geometry ();
-
-        if (!Services.DisplayConfig.is_logical_layout ()) {
-            monitor_dimensions.width /= get_scale_factor ();
-            monitor_dimensions.height /= get_scale_factor ();
-            monitor_dimensions.x /= get_scale_factor ();
-            monitor_dimensions.y /= get_scale_factor ();
+        if (!initialized_background_manager) {
+            Services.BackgroundManager.initialize (panel.get_height ());
+            initialized_background_manager = true;
         }
+    }
 
-        this.set_size_request (monitor_dimensions.width, -1);
+    private void on_enter_monitor (Gdk.Monitor new_monitor) {
+        new_monitor.notify["geometry"].connect (queue_resize);
+        new_monitor.notify["scale"].connect (queue_resize);
+        new_monitor.notify["scale-factor"].connect (queue_resize);
+
+        queue_resize ();
     }
 
     public void toggle_indicator (string name) {
-        popover_manager.toggle_popover_visible (name);
+        panel.toggle_indicator (name);
     }
 
     public void registry_handle_global (Wl.Registry wl_registry, uint32 name, string @interface, uint32 version) {
@@ -115,8 +110,6 @@ public class Wingpanel.PanelWindow : Gtk.Window {
                 desktop_panel = desktop_shell.get_panel (wl_surface);
                 desktop_panel.set_anchor (TOP);
                 desktop_panel.set_hide_mode (NEVER);
-
-                Idle.add_once (update_panel_dimensions); // Update again since we now can be 100% sure that we are on the primary monitor
             }
         }
     }
@@ -194,12 +187,39 @@ public class Wingpanel.PanelWindow : Gtk.Window {
                 break;
             case Services.BackgroundState.TRANSLUCENT_DARK:
             case Services.BackgroundState.TRANSLUCENT_LIGHT:
-                // Blur the full surface (no inset) with a corner radius matching
-                // the `panel.translucent > box` CSS radius, so the blurred region
-                // lines up with what `box` actually paints instead of leaving an
-                // unblurred strip/corner sliver peeking out from under the tint.
-                desktop_panel.add_blur (0, 0, 0, 0, 5);
+                desktop_panel.add_blur (0, 0, 0, 0, 0);
                 break;
         }
+    }
+
+    public override void measure (
+        Gtk.Orientation orientation,
+        int for_size,
+        out int minimum,
+        out int natural,
+        out int minimum_baseline,
+        out int natural_baseline
+    ) {
+        if (orientation != HORIZONTAL) {
+            base.measure (orientation, for_size, out minimum, out natural, out minimum_baseline, out natural_baseline);
+            return;
+        }
+
+        minimum_baseline = natural_baseline = -1;
+
+        var monitor_width = int.MAX;
+        unowned var surface = get_surface ();
+        if (surface != null) {
+            unowned var monitor = get_display ().get_monitor_at_surface (surface);
+            if (monitor != null) {
+                monitor_width = monitor.geometry.width;
+            }
+        }
+
+        if (!Services.DisplayConfig.is_logical_layout ()) {
+            monitor_width /= get_scale_factor ();
+        }
+
+        minimum = natural = monitor_width;
     }
 }
