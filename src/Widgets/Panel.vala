@@ -22,6 +22,8 @@ public class Wingpanel.Widgets.Panel : Granite.Bin {
 
     public Services.PopoverManager popover_manager { get; construct; }
 
+    public bool is_notched { get; private set; }
+
     private IndicatorBar right_menubar;
     private IndicatorBar left_menubar;
     private IndicatorBar center_menubar;
@@ -41,7 +43,17 @@ public class Wingpanel.Widgets.Panel : Granite.Bin {
     }
 
     construct {
-        height_request = 30;
+        var gala_properties = new GLib.Settings ("io.elementary.desktop.wingpanel");
+
+        var height = gala_properties.get_int ("notch-height");
+        is_notched = Services.DisplayConfig.is_edp1_primary () && height > 0;
+
+        height_request = is_notched ? height : 24;
+
+        if (is_notched) {
+            get_style_context ().add_class ("notched");
+        }
+
         hexpand = true;
         vexpand = true;
         valign = START;
@@ -168,10 +180,10 @@ public class Wingpanel.Widgets.Panel : Granite.Bin {
                 indicator_entry.set_transition_type (Gtk.RevealerTransitionType.SLIDE_RIGHT);
                 left_menubar.insert_sorted (indicator_entry);
                 break;
-            case Indicator.DATETIME:
+            /* case Indicator.DATETIME:
                 indicator_entry.set_transition_type (Gtk.RevealerTransitionType.SLIDE_DOWN);
                 center_menubar.insert_sorted (indicator_entry);
-                break;
+                break; */
             default:
                 indicator_entry.set_transition_type (Gtk.RevealerTransitionType.SLIDE_LEFT);
                 right_menubar.insert_sorted (indicator_entry);

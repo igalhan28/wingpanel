@@ -155,30 +155,32 @@ public class Wingpanel.PanelWindow : Gtk.Window {
 
         style_provider.load_from_string (css);
 
+        string[] css_classes = {};
+        if (panel.is_notched) {
+            css_classes += "notched";
+        }
+
         switch (state) {
             case Services.BackgroundState.DARK :
-                panel.css_classes = {"color-light"};
+                css_classes += "color-light";
                 break;
             case Services.BackgroundState.LIGHT:
-                panel.css_classes = {"color-dark"};
+                css_classes += "color-dark";
                 break;
             case Services.BackgroundState.MAXIMIZED:
-                panel.css_classes = {"maximized"};
+                css_classes += "maximized";
                 break;
             case Services.BackgroundState.TRANSLUCENT_DARK:
-                panel.css_classes = {
-                    "color-light",
-                    "translucent"
-                };
+                css_classes += "color-light";
+                css_classes += "translucent";
                 break;
             case Services.BackgroundState.TRANSLUCENT_LIGHT:
-                panel.css_classes = {
-                    "color-dark",
-                    "translucent"
-                };
+                css_classes += "color-dark";
+                css_classes += "translucent";
                 break;
         }
 
+        panel.css_classes = css_classes;
 
         if (desktop_panel == null) {
             return;
@@ -192,7 +194,11 @@ public class Wingpanel.PanelWindow : Gtk.Window {
                 break;
             case Services.BackgroundState.TRANSLUCENT_DARK:
             case Services.BackgroundState.TRANSLUCENT_LIGHT:
-                desktop_panel.add_blur (0, 0, 0, 4, 0);
+                // Blur the full surface (no inset) with a corner radius matching
+                // the `panel.translucent > box` CSS radius, so the blurred region
+                // lines up with what `box` actually paints instead of leaving an
+                // unblurred strip/corner sliver peeking out from under the tint.
+                desktop_panel.add_blur (0, 0, 0, 0, 5);
                 break;
         }
     }
