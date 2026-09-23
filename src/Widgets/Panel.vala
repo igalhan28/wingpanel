@@ -241,11 +241,11 @@ public class Wingpanel.Widgets.Panel : Granite.Bin {
         return ((IndicatorEntry) item).base_indicator.code_name == Indicator.APP_LAUNCHER;
     }
 
-    private static bool center_indicators_filter_func (Object item) requires (item is IndicatorEntry) {
-        return ((IndicatorEntry) item).base_indicator.code_name == Indicator.DATETIME;
+    private bool center_indicators_filter_func (Object item) requires (item is IndicatorEntry) {
+        return is_notched ? false : (((IndicatorEntry) item).base_indicator.code_name == Indicator.DATETIME);
     }
 
-    private static bool right_indicators_filter_func (Object item) requires (item is IndicatorEntry) {
+    private bool right_indicators_filter_func (Object item) requires (item is IndicatorEntry) {
         return !left_indicators_filter_func (item) && !center_indicators_filter_func (item);
     }
 

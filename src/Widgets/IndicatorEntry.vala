@@ -154,7 +154,8 @@ public class Wingpanel.Widgets.IndicatorEntry : Granite.Bin {
             case Indicator.BLUETOOTH: return 5;
             case Indicator.POWER: return 6;
             case Indicator.MESSAGES: return 7;
-            case Indicator.QUICKSETTINGS: return 8;
+            case Indicator.DATETIME: return 8;
+            case Indicator.QUICKSETTINGS: return 9;
             default: return 0;
         }
     }
