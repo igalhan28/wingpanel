@@ -18,9 +18,6 @@
  */
 
 public class Wingpanel.Widgets.IndicatorEntry : Granite.Bin {
-    private const string UNKNOWN_INDICATOR = "xxx-unknown";
-    private const string AYATANA_INDICATOR = "xxx-ayatana";
-
     public Indicator base_indicator { get; construct; }
     public Services.PopoverManager popover_manager { get; construct; }
 
@@ -43,9 +40,6 @@ public class Wingpanel.Widgets.IndicatorEntry : Granite.Bin {
         }
     }
 
-    /* The order in which the indicators are shown from left to right. */
-    private static Gee.HashMap<string, int> indicator_order = new Gee.HashMap<string,int> ();
-
     private Gtk.Revealer revealer;
 
     public IndicatorEntry (Indicator base_indicator, Services.PopoverManager popover_manager) {
@@ -53,24 +47,6 @@ public class Wingpanel.Widgets.IndicatorEntry : Granite.Bin {
             base_indicator: base_indicator,
             popover_manager: popover_manager
         );
-    }
-
-    static construct {
-        indicator_order[AYATANA_INDICATOR] = 0;
-        indicator_order[UNKNOWN_INDICATOR] = 1;
-        indicator_order[Indicator.ACCESSIBILITY] = 2;
-        indicator_order[Indicator.NIGHT_LIGHT] = 3;
-        indicator_order[Indicator.PRIVACY] = 4;
-        indicator_order[Indicator.KEYBOARD] = 5;
-        indicator_order[Indicator.SOUND] = 6;
-        indicator_order[Indicator.NETWORK] = 7;
-        indicator_order[Indicator.BLUETOOTH] = 8;
-        indicator_order[Indicator.PRINTER] = 9;
-        indicator_order[Indicator.SYNC] = 10;
-        indicator_order[Indicator.POWER] = 11;
-        indicator_order[Indicator.MESSAGES] = 12;
-        indicator_order[Indicator.QUICKSETTINGS] = 13;
-        indicator_order[Indicator.SESSION] = 14;
     }
 
     class construct {
@@ -120,7 +96,7 @@ public class Wingpanel.Widgets.IndicatorEntry : Granite.Bin {
         add_controller (gesture_controller);
 
         gesture_controller.pressed.connect ((_gesture_controller, n_press, x, y) => {
-            popover_manager.current_indicator = this;
+            popover_manager.current_indicator = popover_manager.current_indicator == this ? null : this;
             _gesture_controller.set_state (CLAIMED);
         });
 
@@ -170,15 +146,16 @@ public class Wingpanel.Widgets.IndicatorEntry : Granite.Bin {
     }
 
     private static int get_order (Wingpanel.Widgets.IndicatorEntry node) {
-        /* ayatana application indicators on the left of the native indicators */
-        if (node.base_indicator.code_name.has_prefix ("ayatana-")) {
-            return indicator_order[AYATANA_INDICATOR];
+        switch (node.base_indicator.code_name) {
+            case Indicator.NIGHT_LIGHT: return 1;
+            case Indicator.KEYBOARD: return 2;
+            case Indicator.SOUND: return 3;
+            case Indicator.NETWORK: return 4;
+            case Indicator.BLUETOOTH: return 5;
+            case Indicator.POWER: return 6;
+            case Indicator.MESSAGES: return 7;
+            case Indicator.QUICKSETTINGS: return 8;
+            default: return 0;
         }
-
-        if (indicator_order.has_key (node.base_indicator.code_name)) {
-            return indicator_order[node.base_indicator.code_name];
-        }
-
-        return indicator_order[UNKNOWN_INDICATOR];
     }
 }
