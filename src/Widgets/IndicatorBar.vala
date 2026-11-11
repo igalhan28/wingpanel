@@ -31,7 +31,13 @@ public class Wingpanel.Widgets.IndicatorBar : Granite.Bin {
             orientation = HORIZONTAL,
             selection_mode = NONE
         };
-        flow_box.bind_model (indicator_entries, (indicator_entry) => (IndicatorEntry) indicator_entry);
+        // Wrap entries in non-focusable children. When a popover holding focus is hidden, GTK
+        // moves focus to the first focusable widget in the panel; a focused flowboxchild gets the
+        // stylesheet's :focus-visible background, which then sticks on the first indicator.
+        flow_box.bind_model (indicator_entries, (indicator_entry) => new Gtk.FlowBoxChild () {
+            child = (IndicatorEntry) indicator_entry,
+            focusable = false
+        });
 
         indicator_entries.items_changed.connect (update_flow_box_max_children);
 

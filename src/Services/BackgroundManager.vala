@@ -23,7 +23,8 @@ namespace Wingpanel.Services {
         DARK,
         MAXIMIZED,
         TRANSLUCENT_DARK,
-        TRANSLUCENT_LIGHT
+        TRANSLUCENT_LIGHT,
+        FULLSCREEN
     }
 
     [DBus (name = "org.pantheon.gala.WingpanelInterface")]
@@ -141,6 +142,11 @@ namespace Wingpanel.Services {
         }
 
         private void state_updated (uint animation_duration = Granite.TRANSITION_DURATION_IN_PLACE) {
+            if (current_state == FULLSCREEN) {
+                background_state_changed (FULLSCREEN, animation_duration);
+                return;
+            }
+
             if (!use_transparency) {
                 background_state_changed (BackgroundState.MAXIMIZED, animation_duration);
                 return;

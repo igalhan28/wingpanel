@@ -52,6 +52,14 @@ public class Wingpanel.PanelWindow : Gtk.Window {
         resizable = false;
 
         popover_manager.notify["indicator-open"].connect (() => {
+            // Keep the indicators visible on the black fullscreen panel while a popover is open,
+            // even when the pointer is inside the popover rather than over the panel
+            if (popover_manager.indicator_open) {
+                panel.add_css_class ("indicator-open");
+            } else {
+                panel.remove_css_class ("indicator-open");
+            }
+
             if (!popover_manager.indicator_open) {
                 Services.BackgroundManager.get_default ().restore_window ();
                 return;
@@ -169,6 +177,10 @@ public class Wingpanel.PanelWindow : Gtk.Window {
         string[] css_classes = {};
         if (panel.is_notched) {
             css_classes += "notched";
+        }
+
+        if (popover_manager.indicator_open) {
+            css_classes += "indicator-open";
         }
 
         switch (state) {

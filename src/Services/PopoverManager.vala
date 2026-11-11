@@ -38,14 +38,16 @@ public class Wingpanel.Services.PopoverManager : Object {
                 _current_indicator = value;
                 indicator_open = true;
             } else if (value == null && _current_indicator != null) { // Close requested
-                _current_indicator.set_state_flags (NORMAL, true);
+                release_focus ();
+                _current_indicator.unset_state_flags (CHECKED);
                 _current_indicator.display_widget.has_tooltip = true;
                 _current_indicator.base_indicator.closed ();
                 _current_indicator = null;
                 popover.popdown ();
                 indicator_open = false;
             } else { // Switch
-                _current_indicator.set_state_flags (NORMAL, true);
+                release_focus ();
+                _current_indicator.unset_state_flags (CHECKED);
                 _current_indicator.display_widget.has_tooltip = true;
                 _current_indicator.base_indicator.closed ();
                 _current_indicator = value;
@@ -57,7 +59,7 @@ public class Wingpanel.Services.PopoverManager : Object {
                 popover.set_parent (_current_indicator);
                 popover.popup ();
 
-                _current_indicator.set_state_flags (CHECKED, true);
+                _current_indicator.set_state_flags (CHECKED, false);
                 _current_indicator.display_widget.has_tooltip = false;
                 _current_indicator.base_indicator.opened ();
             }
@@ -76,5 +78,23 @@ public class Wingpanel.Services.PopoverManager : Object {
             current_indicator = null;
             popover.unparent ();
         });
+    }
+
+    /*
+     * Drop keyboard focus from the popover while it is still parented to the indicator.
+     * Otherwise GTK only defers a focus move to after the next paint: the panel's ancestors
+     * of the popover keep their :focus-within/:focus-visible state (or focus jumps to the
+     * first indicator), and the stylesheet's flowboxchild:focus-visible background sticks.
+     */
+    private void release_focus () {
+        unowned var root = popover.get_root ();
+        if (root == null) {
+            return;
+        }
+
+        unowned var focus = root.get_focus ();
+        if (focus != null && (focus == popover || focus.is_ancestor (popover))) {
+            root.set_focus (null);
+        }
     }
 }
