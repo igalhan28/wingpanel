@@ -14,6 +14,22 @@ panel.maximized {
     background-color: #000;
 }
 
+/* A fullscreen window sits below the panel (e.g. under the notch): keep the panel solid black
+ * and only show the indicators while the pointer is over it or a popover is open. */
+panel.fullscreen {
+    background-color: #000;
+}
+
+panel.fullscreen > box > * {
+    opacity: 0;
+    transition: opacity 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+panel.fullscreen:hover > box > *,
+panel.fullscreen.indicator-open > box > * {
+    opacity: 1;
+}
+
 panel.translucent > box {
     border-radius: 5px 5px 0 0;
 }
@@ -55,7 +71,8 @@ indicator:checked > revealer {
     background: alpha(@highlight_color, 0.6);
 }
 
-panel.maximized indicator:checked > revealer {
+panel.maximized indicator:checked > revealer,
+panel.fullscreen indicator:checked > revealer {
     background: alpha(white, 0.3);
 }
 
@@ -125,12 +142,14 @@ panel.maximized indicator:checked > revealer {
 }
 
 .maximized .composited-indicator .warning,
+.fullscreen .composited-indicator .warning,
 .translucent.color-dark .composited-indicator .warning {
     /*FIXME: replace with var(--BANANA-100) in Granite 9*/
     color: #fff394;
 }
 
 .maximized .composited-indicator .error,
+.fullscreen .composited-indicator .error,
 .translucent.color-dark .composited-indicator .error {
     /*FIXME: replace with var(--STRAWBERRY-300) in Granite 9*/
     color: #ed5353;

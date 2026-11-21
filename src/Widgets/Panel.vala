@@ -18,6 +18,10 @@
  */
 
 public class Wingpanel.Widgets.Panel : Granite.Bin {
+    private const string DISPLAY_SCHEMA = "io.elementary.settings.display";
+    private const string NOTCH_HEIGHT_KEY = "notch-height";
+    private const int DEFAULT_HEIGHT = 24;
+
     private static Settings panel_settings = new Settings ("io.elementary.desktop.wingpanel");
 
     public Services.PopoverManager popover_manager { get; construct; }
@@ -28,6 +32,9 @@ public class Wingpanel.Widgets.Panel : Granite.Bin {
     private Gtk.CustomFilter visible_indicator_entries_filter;
     private Gtk.FilterListModel visible_indicator_entries;
     private Gtk.SortListModel sorted_indicator_entries;
+    private Gtk.CustomFilter center_indicator_entries_filter;
+    private Gtk.CustomFilter right_indicator_entries_filter;
+    private GLib.Settings? display_settings = null;
 
     private double current_scroll_delta = 0;
 
@@ -40,15 +47,18 @@ public class Wingpanel.Widgets.Panel : Granite.Bin {
     }
 
     construct {
-        var gala_properties = new GLib.Settings ("io.elementary.desktop.wingpanel");
+        unowned var schema_source = SettingsSchemaSource.get_default ();
+        var display_schema = schema_source != null ? schema_source.lookup (DISPLAY_SCHEMA, true) : null;
+        if (display_schema != null && display_schema.has_key (NOTCH_HEIGHT_KEY)) {
+            display_settings = new GLib.Settings.full (display_schema, null, null);
+            display_settings.changed[NOTCH_HEIGHT_KEY].connect (update_notch);
+        }
 
-        var height = gala_properties.get_int ("notch-height");
-        is_notched = Services.DisplayConfig.is_edp1_primary () && height > 0;
-
-        height_request = is_notched ? height : 24;
-
-        if (is_notched) {
-            get_style_context ().add_class ("notched");
+        // The notch only applies while the panel is on the builtin display, which changes when
+        // e.g. the lid is closed or opened with an external monitor connected
+        unowned var display_config = Services.DisplayConfig.get_default ();
+        if (display_config != null) {
+            display_config.monitors_changed.connect (update_notch);
         }
 
         hexpand = true;
@@ -71,13 +81,15 @@ public class Wingpanel.Widgets.Panel : Granite.Bin {
             sorted_indicator_entries,
             new Gtk.CustomFilter (left_indicators_filter_func)
         );
+        center_indicator_entries_filter = new Gtk.CustomFilter (center_indicators_filter_func);
         var center_indicator_entries = new Gtk.FilterListModel (
             sorted_indicator_entries,
-            new Gtk.CustomFilter (center_indicators_filter_func)
+            center_indicator_entries_filter
         );
+        right_indicator_entries_filter = new Gtk.CustomFilter (right_indicators_filter_func);
         var right_indicator_entries = new Gtk.FilterListModel (
             sorted_indicator_entries,
-            new Gtk.CustomFilter (right_indicators_filter_func)
+            right_indicator_entries_filter
         );
 
         var left_menubar = new IndicatorBar (left_indicator_entries);
@@ -92,6 +104,8 @@ public class Wingpanel.Widgets.Panel : Granite.Bin {
         center_box.set_end_widget (right_menubar);
 
         child = center_box;
+
+        update_notch ();
 
         unowned var indicator_manager = IndicatorManager.get_default ();
         indicator_manager.indicator_added.connect (add_indicator);
@@ -222,6 +236,29 @@ public class Wingpanel.Widgets.Panel : Granite.Bin {
         indicator_entry.notify["should-show-indicator"].connect (() =>
             visible_indicator_entries_filter.changed (DIFFERENT)
         );
+    }
+
+    private void update_notch () {
+        var height = display_settings != null ? display_settings.get_int (NOTCH_HEIGHT_KEY) : 0;
+        var notched = height > 0 && Services.DisplayConfig.is_builtin_primary ();
+
+        height_request = notched ? height : DEFAULT_HEIGHT;
+
+        if (notched == is_notched) {
+            return;
+        }
+
+        is_notched = notched;
+
+        if (is_notched) {
+            add_css_class ("notched");
+        } else {
+            remove_css_class ("notched");
+        }
+
+        // The date and time move between the center and the right side
+        center_indicator_entries_filter.changed (DIFFERENT);
+        right_indicator_entries_filter.changed (DIFFERENT);
     }
 
     private void remove_indicator (Indicator indicator) {

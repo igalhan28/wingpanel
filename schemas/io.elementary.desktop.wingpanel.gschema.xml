@@ -11,11 +11,6 @@
       <summary>Sets if scrolling on the panel switches workspaces.</summary>
       <description>Sets if scrolling on the panel switches workspaces.</description>
     </key>
-    <key type="i" name="notch-height">
-			<default>0</default>
-			<summary>Sets the height of the panel notch.</summary>
-			<description>Sets the height of the panel notch.</description>
-		</key>
   </schema>
 
   <schema path="/io/elementary/panel/keybindings/" id="io.elementary.panel.keybindings">

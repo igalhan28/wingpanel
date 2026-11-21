@@ -51,10 +51,29 @@ public interface Wingpanel.Services.DisplayConfig : Object {
         _is_logical_layout = layout_mode == 1;
     }
 
-    // Assuming eDP-1 is the internal display, wingpanel height should be adjusted to notch height
-    public static bool is_edp1_primary () {
+    /**
+     * The DisplayConfig proxy, e.g. to get notified about monitor changes with monitors_changed,
+     * or null if it isn't available.
+     */
+    public static unowned DisplayConfig? get_default () {
         if (proxy == null) {
             init ();
+        }
+
+        return proxy;
+    }
+
+    /**
+     * Whether the primary monitor (the one wingpanel is on) contains the builtin display.
+     * Returns false while the lid is closed with an external monitor connected.
+     */
+    public static bool is_builtin_primary () {
+        if (proxy == null) {
+            init ();
+        }
+
+        if (proxy == null) {
+            return false;
         }
 
         uint current_serial;
@@ -75,15 +94,34 @@ public interface Wingpanel.Services.DisplayConfig : Object {
         }
 
         foreach (var logical in mutter_logical_monitors) {
-            if (!logical.primary) continue;
+            if (!logical.primary) {
+                continue;
+            }
+
             foreach (var info in logical.monitors) {
-                if (info.connector == "eDP-1") {
+                if (is_builtin (info, mutter_monitors)) {
                     return true;
                 }
             }
         }
 
         return false;
+    }
+
+    private static bool is_builtin (MutterReadMonitorInfo info, MutterReadMonitor[] mutter_monitors) {
+        foreach (var monitor in mutter_monitors) {
+            if (monitor.monitor.connector != info.connector) {
+                continue;
+            }
+
+            var is_builtin_variant = monitor.properties.lookup ("is-builtin");
+            if (is_builtin_variant != null && is_builtin_variant.is_of_type (VariantType.BOOLEAN)) {
+                return is_builtin_variant.get_boolean ();
+            }
+        }
+
+        // Older Mutter versions don't report is-builtin, assume eDP is the internal display
+        return info.connector.has_prefix ("eDP");
     }
 
     public signal void monitors_changed ();

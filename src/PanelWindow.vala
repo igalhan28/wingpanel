@@ -201,6 +201,9 @@ public class Wingpanel.PanelWindow : Gtk.Window {
                 css_classes += "color-dark";
                 css_classes += "translucent";
                 break;
+            case Services.BackgroundState.FULLSCREEN:
+                css_classes += "fullscreen";
+                break;
         }
 
         panel.css_classes = css_classes;
@@ -213,6 +216,7 @@ public class Wingpanel.PanelWindow : Gtk.Window {
             case Services.BackgroundState.DARK :
             case Services.BackgroundState.LIGHT:
             case Services.BackgroundState.MAXIMIZED:
+            case Services.BackgroundState.FULLSCREEN:
                 desktop_panel.remove_blur ();
                 break;
             case Services.BackgroundState.TRANSLUCENT_DARK:

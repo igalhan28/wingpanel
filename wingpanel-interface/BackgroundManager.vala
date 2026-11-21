@@ -9,7 +9,8 @@ public enum BackgroundState {
     DARK,
     MAXIMIZED,
     TRANSLUCENT_DARK,
-    TRANSLUCENT_LIGHT
+    TRANSLUCENT_LIGHT,
+    FULLSCREEN
 }
 
 public class WingpanelInterface.BackgroundManager : Object {
@@ -137,7 +138,8 @@ public class WingpanelInterface.BackgroundManager : Object {
      * Check if Wingpanel's background state should change.
      *
      * The state is defined as follows:
-     *  - If there's a maximized or fullscreen window, the state should be MAXIMIZED;
+     *  - If there's a fullscreen window, the state should be FULLSCREEN;
+     *  - If there's a maximized window, the state should be MAXIMIZED;
      *  - If no information about the background could be gathered, it should be TRANSLUCENT;
      *  - If there's too much contrast or sharpness, it should be TRANSLUCENT;
      *  - If the background is too bright, it should be DARK;
@@ -167,7 +169,7 @@ public class WingpanelInterface.BackgroundManager : Object {
         BackgroundState new_state;
 
         if (has_fullscreen_window) {
-            new_state = BackgroundState.TRANSLUCENT_LIGHT;
+            new_state = BackgroundState.FULLSCREEN;
         } else if (has_maximized_window) {
             new_state = BackgroundState.MAXIMIZED;
         } else if (bk_color_info == null) {
